@@ -1,5 +1,5 @@
 resource "aws_instance" "application_instance" {
-  ami           = "ami-0361bbf2b99f46c1d"  
+  ami           = "ami-062680d0a2ee357d0"  
   instance_type = "t2.micro"  
 
   tags = {
@@ -42,33 +42,41 @@ EOF
 resource "aws_security_group" "application_sg" {
   name        = "application_sg"
   description = "Security group for Application Instance"
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] 
-  }
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-	  cidr_blocks = ["${chomp(data.http.myip.body)}/32"]
-  }
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-	  cidr_blocks = ["${aws_instance.monitoring_instance.public_ip}/32"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"] 
-  }
 }
 
+#Using seperate aws_security_group_rule resources instead of aws_security_group to avoid terraform cyclic issue https://github.com/hashicorp/terraform-provider-aws/issues/6015)
+resource "aws_security_group_rule" "application_sg_all_traffic_from_monitoring_server" {
+  security_group_id = "${aws_security_group.application_sg.id}"
+  type        = "ingress"
+  from_port   = 0
+  to_port     = 0
+  protocol    = "-1"
+  cidr_blocks = ["${aws_instance.monitoring_instance.public_ip}/32"]
+}
+
+resource "aws_security_group_rule" "application_sg_http_from_internet" {
+  security_group_id = "${aws_security_group.application_sg.id}"
+  type        = "ingress"
+  from_port   = 80
+  to_port     = 80
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "application_sg_ssh_from_home" {
+  security_group_id = "${aws_security_group.application_sg.id}"
+  type        = "ingress"
+  from_port   = 22
+  to_port     = 22
+  protocol    = "tcp"
+	cidr_blocks = ["${chomp(data.http.myip.body)}/32"]
+}
+
+resource "aws_security_group_rule" "application_sg_all_traffice_to_internet" {
+  security_group_id = "${aws_security_group.application_sg.id}"
+  type        = "egress"
+  from_port   = 0
+  to_port     = 0
+  protocol    = "-1"
+  cidr_blocks = ["0.0.0.0/0"] 
+}
