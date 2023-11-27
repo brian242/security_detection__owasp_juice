@@ -16,7 +16,7 @@ dnf -y update
 dnf -y install docker tcpdump
 systemctl enable --now docker
 #Setup OWASP juice-shop
-docker pull bkimminich/juice-shop
+docker pull docker.io/bkimminich/juice-shop:latest
 docker run -d -p 80:3000 bkimminich/juice-shop
 #Setup wazuh agent
 rpm --import https://packages.wazuh.com/key/GPG-KEY-WAZUH
